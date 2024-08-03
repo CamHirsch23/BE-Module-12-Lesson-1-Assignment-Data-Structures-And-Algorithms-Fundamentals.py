@@ -1,5 +1,8 @@
-# server.py (Python backend using Flask and Flask-SocketIO)
-"""Module for a text messaging app server using Flask and Flask-SocketIO."""
+"""
+Module for a text messaging app server using Flask and Flask-SocketIO.
+
+This server handles message storage, retrieval, and real-time updates for a messaging application.
+"""
 
 import time
 from collections import defaultdict, deque
@@ -12,13 +15,20 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
 # In-memory data structures for demonstration purposes
-messages = defaultdict(deque)  # Stores messages for each conversation
-conversations = SortedList(key=lambda x: -x['last_message_time'])  # Sorted list of conversations
 
+# Stores messages for each conversation using a hash table (defaultdict) for efficient retrieval.
+# Deque is used for maintaining message order and providing efficient appends and pops from both ends.
+messages = defaultdict(deque)
+
+# Sorted list of conversations using SortedList to maintain an ordered list based on the last message time.
+# This allows for efficient sorting and retrieval of active conversations.
+conversations = SortedList(key=lambda x: -x['last_message_time'])
 
 @app.route('/send-message', methods=['POST'])
 def send_message():
-    """Endpoint for sending a message and emitting it to a conversation room."""
+    """
+    Endpoint for sending a message and emitting it to a conversation room.
+    """
     data = request.json
     message = {
         'text': data['message'],
@@ -49,16 +59,18 @@ def send_message():
 
     return jsonify({'status': 'Message sent'}), 200
 
-
 @socketio.on('join_conversation')
 def handle_join_conversation(conversation_id):
-    """WebSocket event for joining a conversation."""
+    """
+    WebSocket event for joining a conversation.
+    """
     join_room(conversation_id)
-
 
 @socketio.on('new_message')
 def handle_new_message(data):
-    """WebSocket event for handling a new message."""
+    """
+    WebSocket event for handling a new message.
+    """
     conversation_id = data['conversationId']
     message = {
         'text': data['text'],
@@ -85,20 +97,22 @@ def handle_new_message(data):
 
     emit('new_message', message, room=conversation_id)
 
-
 @app.route('/conversations', methods=['GET'])
 def get_conversations():
-    """Endpoint to get the list of conversations."""
+    """
+    Endpoint to get the list of conversations.
+    """
     return jsonify({'conversations': list(conversations)}), 200
-
 
 @app.route('/messages/<conversation_id>', methods=['GET'])
 def get_messages(conversation_id):
-    """Endpoint to get messages for a specific conversation."""
+    """
+    Endpoint to get messages for a specific conversation.
+    """
     conv_messages = list(messages[conversation_id])
     conv_messages.reverse()  # Show latest messages first
     return jsonify({'messages': conv_messages}), 200
 
-
 if __name__ == '__main__':
+    # Using WebSockets for real-time updates to ensure low latency and efficient resource usage.
     socketio.run(app, debug=True)
